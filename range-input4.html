@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- 해줌 슬라이더 -->
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Document</title>
+	<style>
+		html,
+		body {
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			margin: 10rem 0px;
+			/* display: flex;
+			justify-content: center;
+			align-items: center; */
+		}
+
+		slider-box-container {
+			display: flex;
+			width: 500px;
+			background-color: #ecf0f1;
+			margin: 5px;
+		}
+
+		slider-box-container button {
+			background: none;
+			border: none;
+			padding: 10px;
+		}
+
+		/* slider box style */
+
+		slider-box {
+			width: 100%;
+			/* 후에 padding: 1.5rem 2rem 으로 수정합니다. 참고바랍니다. */
+			padding: 1.5rem 2rem;
+			display: flex;
+			flex-direction: column;
+			justify-content: flex-start;
+			align-items: center;
+			position: relative;
+		}
+
+		.slider-input {
+			width: calc(100% - 2rem);
+			top: 3rem;
+			left: 1rem;
+			position: absolute;
+			border: none;
+		}
+
+		.slider-input:first-child {
+			top: 1rem;
+		}
+
+
+		.slider-input {
+			width: calc(100% - 2rem);
+			top: 1rem;
+			left: 1rem;
+			position: absolute;
+			border: none;
+			pointer-events: none;
+			z-index: 10;
+			appearance: none;
+			opacity: 0.5;
+		}
+
+		.slider-input::-webkit-slider-thumb {
+			pointer-events: all;
+			/* appearance, background-color는 지워도 됨 */
+			appearance:none;
+			background-color: red;
+			width: 30px;
+			height: 30px;
+		}
+
+		.track {
+			position: relative;
+			width: 100%;
+			height: 16px;
+			/*margin-top: 5rem;*/
+			/* g-02 */
+			background-color: #E6ECF4; 
+			border-radius: 0.5rem;
+		}
+
+		.range {
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			/* g-06 */
+			background-color: #566374;
+			border-radius: 0.5rem;
+			width: 0;
+		}
+
+		.thumb {
+			position: absolute;
+			top: 0;
+			transform: translateY(-0.25rem);
+			width: 25px;
+			height: 25px;
+			/* g-06 */
+			border: 1px solid #566374;
+			background-color: #FFF;
+			border-radius: 50%;
+			left: -10px;
+		}
+
+	</style>
+</head>
+
+<body>
+	<slider-box-container id="a"></slider-box-container>
+	<slider-box-container></slider-box-container>
+	<script>
+		window.customElements.define('slider-box', class extends HTMLElement {
+			
+			
+			constructor() {
+				super();
+			}
+
+			connectedCallback() {
+
+				// range input
+				this.$$input = document.createElement('input');
+				this.$$input.classList.add('slider-input');
+				this.$$input.setAttribute('type', 'range');
+				this.$$input.setAttribute('min', '1');
+				this.$$input.setAttribute('max', '10');
+				this.$$input.setAttribute('step', '1');
+				this.$$input.setAttribute('value', '1');
+				this.current = '1';
+				this.appendChild(this.$$input);
+				
+				// track (range, thumb)
+				this.$$track = document.createElement('div');
+				this.$$track.classList.add('track');
+
+				this.$$range = document.createElement('div');
+				this.$$range.classList.add('range');
+				this.$$track.appendChild(this.$$range);
+
+				this.$$thumb = document.createElement('div');
+				this.$$thumb.classList.add('thumb');
+				this.$$track.appendChild(this.$$thumb);
+				this.appendChild(this.$$track);
+				
+				this.$$input.addEventListener('input', this._handleInput.bind(this));
+				this.$$input.addEventListener('change', this._handleInput.bind(this));
+				this.$$input.addEventListener('upValue', this._handleInput.bind(this));
+			}
+
+			_handleInput(e) {
+				const _this = e.target;
+				const { value, min, max } = _this;
+
+				_this.value = +_this.value + (e.detail?.upValue || 0);
+
+				this._setting(_this.value, min, max);
+
+				
+			};
+
+			_setting(value, min, max) {
+				const percent = ((+value - +min) / (+max - +min)) * 100;
+
+				this.$$thumb.style.left = `calc(${percent}% - 10px)`;
+				this.$$range.style.width = `${percent}%`;
+
+				this.dispatchEvent(new CustomEvent('afterInput', {
+					detail: {
+						oldValue: this.current + '',
+						newValue: value + '',
+					}
+				}));
+
+				this.current = value;
+			}
+
+			upValue(v) {
+				this.$$input.dispatchEvent(new CustomEvent('upValue', {
+					detail: {
+						upValue: v,
+					}
+				}));
+			}
+
+			setMin(v) {
+				if(v > parseInt(this.$$input.max, 10)) {
+					console.warn('invalid value in setMin');
+					return;
+				}
+
+				this.$$input.setAttribute('min', v + '');
+				if(this.current < v) {
+					this.$$input.setAttribute('value', v + '');
+					this.current = v + '';
+				} else {
+					const min = v;
+					const max = parseInt(this.$$input.max, 10);
+					const value = parseInt(this.$$input.value, 10);
+					
+					this._setting(value, min, max);
+				}
+			}
+
+			setMax(v) {
+				if(v < parseInt(this.$$input.min, 10)) {
+					console.warn('invalid value in setMax');
+					return;
+				}
+
+				this.$$input.setAttribute('max', v + '');
+
+				if(this.current > v) {
+					this.$$input.setAttribute('value', v + '');
+					this.current = v + '';
+
+					const min = parseInt(this.$$input.min, 10);
+					const max = v;
+					const value = parseInt(this.$$input.value, 10);
+					
+					this._setting(value, min, max);
+				}
+			}
+
+			setValue(v) {
+				this.$$input.value = v + '';
+
+				const min = parseInt(this.$$input.min, 10);
+				const max = parseInt(this.$$input.max, 10);
+				const value = v;
+				
+				this._setting(value, min, max);
+			}
+
+			getValue() {
+				return this.$$input.value;
+			}
+		});
+
+		window.customElements.define('slider-box-container', class extends HTMLElement {
+			constructor() {
+				super();
+			}
+
+			connectedCallback() {
+				this.$$minusBtn = document.createElement('button');
+				this.$$minusBtn.innerText = '-';
+				this.$$minusBtn.addEventListener('click', this._handleClickMinusBtn.bind(this));
+				this.appendChild(this.$$minusBtn);
+				
+				this.$$sliderBox = document.createElement('slider-box');
+				this.$$sliderBox.addEventListener('afterInput', this._handleAfterInput.bind(this));
+				this.appendChild(this.$$sliderBox);
+
+				this.$$plusBtn = document.createElement('button');
+				this.$$plusBtn.innerText = '+';
+				this.$$plusBtn.addEventListener('click', this._handleClickPlusBtn.bind(this));
+				this.appendChild(this.$$plusBtn);
+			}
+
+			_handleClickMinusBtn(e) {
+				this.$$sliderBox.upValue(-1);
+			}
+
+			_handleClickPlusBtn(e) {
+				this.$$sliderBox.upValue(1);
+			}
+
+			_handleAfterInput(e) {
+				const {oldValue, newValue} = e.detail;
+				this.dispatchEvent(new CustomEvent('afterInputContainer', {
+					detail: {
+						oldValue, newValue
+					}
+				}));
+			}
+
+			setMin(v) {
+				this.$$sliderBox.setMin(v);
+			}
+
+			setMax(v) {
+				this.$$sliderBox.setMax(v);
+			}
+
+			setValue(v) {
+				this.$$sliderBox.setValue(v);
+			}
+
+			getValue() {
+				return this.$$sliderBox.getValue();
+			}
+		});
+
+		const a = document.querySelector('#a');
+		a.addEventListener('afterInputContainer', (e) => {
+			console.log('값 변경에 대한 처리는 여기에다가하면 된다.', e.detail);
+		})
+	</script>
+
+</body>
+
+</html>

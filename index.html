@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+	<style>
+		.bar-container {
+			flex: 1;
+			background-color: rgba(100,0,200,.5);
+		}
+
+		.bar {
+			width: 0%;
+			height: 100%;
+			position: relative;
+			top: -1px;
+			background-color: rgba(100,10,100,1);
+		}
+
+		.transparent-right-btn {
+			padding: 10px;
+			margin-left: 10px;
+		}
+
+		.transparent-left-btn {
+			padding: 10px;
+			margin-right: 10px;
+		}
+
+		.point-container {
+			left: calc(0% - 15px);
+			top: calc(-15px + 50%);
+			position: relative;
+			width: 0%;
+			height: 1px;
+		}
+
+		.point-container div {
+			position: absolute;
+			width: 30px;
+			height: 30px;
+			background: red;
+			border-radius: 30px;
+			z-index: 2;
+		}
+	</style>
+</head>
+
+<body>
+	<div style="margin-top: 10px;">
+	<slider-bar id="a"></slider-bar>
+	</div>
+	<div style="margin-top: 10px;">
+	<slider-bar id="b"></slider-bar>
+	</div>
+	<div style="margin-top: 10px;">
+	<slider-bar id="c"></slider-bar>
+	</div>
+</body>
+<script>
+	window.customElements.define('slider-bar', class extends HTMLElement {
+		set current(c) {
+			this._current = c;
+			console.log(this.min)
+			
+			if(this.current !== undefined
+				&& this.min !== undefined
+				&& this.max !== undefined
+				&& this.step !== undefined
+			) {
+				const range = Math.abs(this.min-this.max);
+				console.log('range + range%this.step', range + range%this.step);
+				const rate = (this.current - (this.min < 0 ? this.min : 0)) / (range + range%this.step -1) * 100;
+				this.$pointContainer.style.left = 'calc(' + (rate > 100 ? 100 : rate) + '% - 15px)';
+				this.$bar.style.width = (rate > 100 ? 100 : rate) + '%';
+			}
+			this.dispatchEvent(new CustomEvent('changeNumber'), {current: this._current});
+		}
+		
+		get current() {
+			return this._current;
+		}
+
+		set step(v) {
+			this._step = v;
+			this.redraw();
+		}
+
+		get step() {
+			return this._step;
+		}
+
+		set min(v) {
+			this._min = v;
+			this.redraw();
+		}
+
+		get min() {
+			return this._min;
+		}
+
+		set max(v) {
+			this._max = v;
+			this.redraw();
+		}
+
+		get max() {
+			return this._max;
+		}
+
+		constructor() {
+			super();
+			
+			this.$container = document.createElement('div');
+			this.$container.style.display = 'flex';
+
+			this.$plusBtn = document.createElement('button');
+			this.$plusBtn.classList.add('transparent-right-btn');
+			this.$plusBtn.innerText = '+';
+			this.$plusBtn.addEventListener('click', () => {
+				const current = this._current + this.step;
+				if(current <= this.max-(this.min < 0 ? this.min : 0)
+					|| current <= this.max-(this.min < 0 ? this.min : 0) + this.step
+				) {
+					this.current = current;
+				}
+			});
+
+			this.$barContainer = document.createElement('div');
+			this.$barContainer.classList.add('bar-container');
+
+			this.$pointContainer = document.createElement('div');
+			this.$pointContainer.classList.add('point-container');
+
+			this.$point = document.createElement('div');
+
+
+			let cursorX = -1;
+			let isDown = false;
+			this.$point.addEventListener('mousedown', function(){
+				// console.log('down', this);	
+				isDown = true;			
+			});
+
+			this.$point.addEventListener('mousemove', function(e){
+				if(isDown) {
+					console.log('down', this);	
+					console.log();
+				}	
+			});
+
+			window.addEventListener('mouseup', () => {
+				cursorX = -1;
+				isDown = false;
+			});
+
+			this.$pointContainer.appendChild(this.$point);
+
+			this.$barContainer.appendChild(this.$pointContainer);
+
+			this.$bar = document.createElement('div');
+			this.$bar.classList.add('bar');
+			this.$barContainer.appendChild(this.$bar);
+			
+			
+			// this.$bar.classList.add('flex-1');
+
+			this.$minusBtn = document.createElement('button');
+			this.$minusBtn.innerText = '-';
+			this.$minusBtn.classList.add('transparent-left-btn');
+			this.$minusBtn.addEventListener('click', () => {
+				const current = this._current - this.step;
+				if(current >= this.min
+					|| current > this.min - this.step
+				) {
+					this.current = current;
+				}
+			});
+		}
+
+		connectedCallback() {
+			this.current = 0;
+
+			this.appendChild(this.$container);
+			
+			this.$container.appendChild(this.$minusBtn);
+			this.$container.appendChild(this.$barContainer);
+			this.$container.appendChild(this.$plusBtn);
+		}
+
+		attributeChangedCallback(attrName, oldValue, newValue) {
+			
+		}
+
+
+		redraw() {
+			// console.log(this.current, this.max, this.min, this.step);
+			// this.$points.removeChild();
+
+			console.log(this.min, this.max, this.step, Math.abs(this.min-this.max) / this.step);
+			if(
+				this.min !== undefined
+				&& this.max !== undefined
+				&& this.step !== undefined
+			) {
+				// new Array(parseInt(Math.abs(this.min-this.max) / this.step, 10)+1)
+				// .fill(0)
+				// .forEach((_, i) => {
+				// 	const $point = document.createElement('div');
+				// 	$point.style.flex = 1;
+				// 	$point.style.backgroundColor = 'rgba(100,200,100)';
+				// 	this.$points.appendChild($point);
+				// 	console.log($point);
+				// });
+
+				this.current = this.min;
+			}
+		}
+	});
+
+	// Component Test
+	const $sliderBar = document.querySelector('#a');
+	$sliderBar.step = 4;
+	$sliderBar.min = 0;
+	$sliderBar.max = 10;
+	$sliderBar.addEventListener('changeNumber', (e, v) => {
+		console.log(e.target.current);
+	});
+
+	const $sliderBar2 = document.querySelector('#b');
+	$sliderBar2.step = 3;
+	$sliderBar2.min = -4;
+	$sliderBar2.max = 5;
+	$sliderBar2.redraw();
+	$sliderBar2.addEventListener('changeNumber', (e, v) => {
+		console.log(e.target.current);
+	});
+
+	const $sliderBar3 = document.querySelector('#c');
+	$sliderBar3.step = 3;
+	$sliderBar3.min = 0;
+	$sliderBar3.max = 80;
+	$sliderBar3.redraw();
+	$sliderBar3.addEventListener('changeNumber', (e, v) => {
+		console.log(e.target.current);
+	});
+</script>
+
+</html>
